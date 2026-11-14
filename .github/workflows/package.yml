@@ -81,6 +81,23 @@ jobs:
               (destination / name).write_bytes(data)
               print(f"{name}: {actual}")
           PY
+      - name: stage keyboard firmware
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          source = Path("ci-inputs/firmware/nanosic/MCU_Upgrade.bin")
+          destination = Path("device/.cache/firmware/nanosic/MCU_Upgrade.bin")
+          expected = "9eb7213603474d926d3af1124d3c14d63cbfc58ea2f7f7d9fedc088093fd63c5"
+          data = source.read_bytes()
+          actual = hashlib.sha256(data).hexdigest()
+          if actual != expected:
+              raise SystemExit(f"keyboard firmware SHA-256 mismatch: {actual}")
+          destination.parent.mkdir(parents=True, exist_ok=True)
+          destination.write_bytes(data)
+          print(f"MCU_Upgrade.bin: {actual}")
+          PY
       - name: pin the sheng SoC sources required by Bluetooth
         run: |
           python3 - <<'PY'
