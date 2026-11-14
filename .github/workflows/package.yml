@@ -212,9 +212,43 @@ jobs:
                  "code_end={code_end:#x} data={self.roots[\"__DATA\"][\"va\"]:#x} "
                  "over={code_end - self.roots[\"__DATA\"][\"va\"]:#x}')")
           if old in text:
-              path.write_text(text.replace(old, new, 1), newline="\n")
+              text = text.replace(old, new, 1)
           elif new not in text:
               raise SystemExit("unexpected XnuPrelink layout collision check")
+          marker = "        self.size = self.cursor\n        self.validate()\n"
+          replacement = '''        self.size = self.cursor
+                  for segment in self.native.segments:
+                      if segment['size']:
+                          print(f"layout native {segment['name']}: size={segment['size']:#x} filesize={segment['filesize']:#x}")
+                  data = self.segment('__DATA')
+                  data_start = self.placements['__DATA']
+                  data_end = data_start + data['size']
+                  data_root = self.roots['__DATA']
+                  print(f"layout root __DATA: va={data_root['va']:#x} size={data_root['size']:#x}")
+                  retained = sorted((begin, end) for begin, end in self.occupied
+                                    if data_root['va'] <= begin < data_root['va'] + data_root['size'])
+                  overlapping = [(begin, end) for begin, end in retained
+                                 if data_start < end and begin < data_end]
+                  if overlapping:
+                      begin, end = overlapping[0]
+                      print(f"layout __DATA: start={data_start:#x} end={data_end:#x} "
+                            f"first_retained={begin:#x}..{end:#x} over={data_end - begin:#x}")
+                  else:
+                      print(f"layout __DATA: start={data_start:#x} end={data_end:#x} no retained overlap")
+                  try:
+                      self.validate()
+                  except ValueError as error:
+                      if overlapping:
+                          begin, end = overlapping[0]
+                          raise ValueError(f"{error}: native __DATA=[{data_start:#x},{data_end:#x}) "
+                                           f"retained={begin:#x}..{end:#x} over={data_end - begin:#x}") from error
+                      raise
+          '''
+          if marker in text:
+              text = text.replace(marker, replacement, 1)
+          elif "layout native" not in text:
+              raise SystemExit("unexpected XnuPrelink layout validation")
+          path.write_text(text, newline="\n")
           PY
       - name: tools
         run: |
@@ -300,6 +334,17 @@ jobs:
             args+=(--init-data)
           fi
           scripts/package.sh "${args[@]}"
+      - name: native prelink failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-prelink-${{ inputs.os }}
+          retention-days: 1
+          if-no-files-found: warn
+          path: |
+            UniXNU/out/sheng/*/*/tree/build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf
+            UniXNU/out/sheng/*/*/logs/prelink.log
+            UniXNU/out/sheng/*/*/tree/kits/XnuPrelink/fileset_layout.py
       - name: fileset-reference failure diagnostics
         if: failure()
         run: |
