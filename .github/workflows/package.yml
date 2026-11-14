@@ -154,6 +154,19 @@ jobs:
                   raise SystemExit("unexpected diagnostics patch header")
               patch.write_text(text.replace(old, new, 1), newline="\n")
           PY
+      - name: backport the reference-kernel cache-input stub
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("UniXNU/scripts/build-fileset-release-reference.py")
+          text = path.read_text()
+          old = "native_[a-z0-9_]+|boot_log_rounds)"
+          new = "native_[a-z0-9_]+|boot_log_rounds|boot_cache_input_capture)"
+          if old in text:
+              path.write_text(text.replace(old, new, 1), newline="\n")
+          elif new not in text:
+              raise SystemExit("unexpected reference-kernel stub matcher")
+          PY
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
@@ -238,6 +251,15 @@ jobs:
             args+=(--init-data)
           fi
           scripts/package.sh "${args[@]}"
+      - name: fileset-reference failure diagnostics
+        if: failure()
+        run: |
+          find UniXNU/out/sheng -path '*/build/xnu/fileset-reference/*/*-build.log' -type f -print0 2>/dev/null |
+          while IFS= read -r -d '' log; do
+            echo "::group::${log} (tail)"
+            tail -n 400 "$log" || true
+            echo "::endgroup::"
+          done
       - uses: actions/cache/save@v4
         if: always() && inputs.os == '27' && steps.data-cache.outputs.cache-hit != 'true' && hashFiles('UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr') != ''
         with:
