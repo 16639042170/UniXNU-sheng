@@ -260,6 +260,15 @@ jobs:
             tail -n 400 "$log" || true
             echo "::endgroup::"
           done
+      - name: kernel failure diagnostics
+        if: failure()
+        run: |
+          find UniXNU/out/sheng -path '*/logs/kernel.log' -type f -print0 2>/dev/null |
+          while IFS= read -r -d '' log; do
+            echo "::group::${log} (tail)"
+            tail -n 600 "$log" || true
+            echo "::endgroup::"
+          done
       - uses: actions/cache/save@v4
         if: always() && inputs.os == '27' && steps.data-cache.outputs.cache-hit != 'true' && hashFiles('UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr') != ''
         with:
