@@ -380,6 +380,16 @@ extern "C" void boot_progress_cancel_scanout(void) {}
 extern "C" void boot_progress_stage(const char *) {}
 extern "C" int boot_progress_pulse_anchor(uintptr_t,uint64_t,unsigned,unsigned,unsigned) {return 0;}
 ''')
+support.write_text(support.read_text() + f'''
+// The pinned GopFramebuffer has no request-layout export (the newer backend defines one): give the
+// rejection report the ABI fixture's request fields instead of leaving an undefined weak import.
+extern "C" const unsigned native_legacy_request_layout[6]={{{R['rect0']},{R['rect1']},{R['masks']},{R['options']},{R['dims']},{R['surfaces']}}};
+// The pinned backend does not count scanout formats; the report reads a defined, zeroed array.
+extern "C" volatile uint32_t native_legacy_formats[10]={{}};
+// macOS-only board probes: absent from the iPadOS 27 build, so the display probe starts nothing.
+extern "C" void sheng_ethernet_probe(void) {{}}
+extern "C" void sheng_software_aes_probe(void) {{}}
+''')
 compile_cpp(support, OUT / 'LegacyDisplaySupport27.o')
 # The keystore state service (AppleKeyStoreState) and its probe, unchanged from iPadOS 17.
 keystore_source = ROOT / 'kits/sheng/KeyStoreProbe.cpp'
@@ -560,6 +570,9 @@ board_objects.append(board_dir / 'Wn8030Firmware.o')
 # The audio DSP's firmware file reader goes through the VFS: BSD flags.
 compile_c(KITS / 'AdspFirmware.c', board_dir / 'AdspFirmware.o', 'bsd/DEVELOPMENT/kern_exec.o.json')
 board_objects.append(board_dir / 'AdspFirmware.o')
+# The Bluetooth probe's firmware reader (BluetoothProbe.cpp) also goes through the VFS.
+compile_c(KITS / 'BluetoothFirmware.c', board_dir / 'BluetoothFirmware.o', 'bsd/DEVELOPMENT/kern_exec.o.json')
+board_objects.append(board_dir / 'BluetoothFirmware.o')
 board_objects += [Path(line.split(' ', 1)[1]) for line in run(['python3', ROOT / 'scripts/build-ath12k-wifi.py', WIFI, board_dir / 'ath12k-wifi'],
                                                                     text=True).splitlines() if line.startswith('OBJ ')]
 board_objects += [Path(line.split(' ', 1)[1]) for line in run(['python3', ROOT / 'scripts/build-qca-bluetooth.py', BLUETOOTH,
@@ -887,7 +900,7 @@ sources = [ROOT / 'drivers/GopFramebuffer/NativeLegacyDisplay.cpp', ROOT / 'driv
            ROOT / 'drivers/GopFramebuffer/NativeHalfCodes.h', source,
            ROOT / 'scripts' / ABI_PATH.name, keystore_source, ROOT / 'drivers/AppleKeyStoreState/NativeKeyStoreEvents.cpp',
            ROOT / f'scripts/hid-device-{BUILD}.json', hid_probe]
-sources += [KITS / name for name in ('BluetoothProbe.cpp', 'BluetoothFirmware.h', 'WcnPower.h')]
+sources += [KITS / name for name in ('BluetoothProbe.cpp', 'BluetoothFirmware.c', 'BluetoothFirmware.h', 'WcnPower.h')]
 sources += [ROOT / 'scripts/build-qca-bluetooth.py', BLUETOOTH / 'tools/source-lock.json']
 sources += [Path(name) for name in json.loads((board_dir / 'qca-bluetooth/report.json').read_text())['source']]
 for directory in ('include', 'src', 'shim', 'out/linux'):
