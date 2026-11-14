@@ -167,6 +167,40 @@ jobs:
           elif new not in text:
               raise SystemExit("unexpected reference-kernel stub matcher")
           PY
+      - name: backport the XnuPrelink bang-root exclusion
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("UniXNU/kits/XnuPrelink/fileset_emit.py")
+          text = path.read_text()
+          marker = "excluded = {root[1:] for root in roots if root.startswith('!')}"
+          if marker not in text:
+              edits = [
+                  (
+                      "    closure, pending = set(), list(roots)\n",
+                      "    # A root written !bundle.id leaves that dependency out, for a kext that only names it in a metaclass comparison: its\n"
+                      "    # OSDynamicCast finds nothing, and rebase_collection takes it off the retained kexts' library lists.\n"
+                      "    excluded = {root[1:] for root in roots if root.startswith('!')}\n"
+                      "    closure, pending = set(), [root for root in roots if not root.startswith('!')]\n",
+                  ),
+                  (
+                      "        if identifier in closure:\n",
+                      "        if identifier in closure or identifier in excluded:\n",
+                  ),
+                  (
+                      "            dropped_personalities.append(entry['CFBundleIdentifier'])\n",
+                      "            dropped_personalities.append(entry['CFBundleIdentifier'])\n"
+                      "        for root in roots or ():\n"
+                      "            if root.startswith('!') and root[1:] in (entry.get('OSBundleLibraries') or {}):\n"
+                      "                del entry['OSBundleLibraries'][root[1:]]\n",
+                  ),
+              ]
+              for old, new in edits:
+                  if text.count(old) != 1:
+                      raise SystemExit(f"unexpected XnuPrelink context: {old!r}")
+                  text = text.replace(old, new, 1)
+              path.write_text(text, newline="\n")
+          PY
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
