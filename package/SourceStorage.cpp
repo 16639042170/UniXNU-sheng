@@ -332,3 +332,14 @@ __attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_flush_
 __attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_flush_blocks = 0;
 __attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_timer_flushes = 0;
 }
+
+// The pinned corecrypto 14 does not define the 4K digest counters BootLog.c reads: they are
+// declared across a multi-line block, which the weak-import defaults generator does not parse.
+// Weak hidden zeros keep the kernel link whole; a later strong definition still wins.
+extern "C" {
+__attribute__((weak, visibility("hidden"))) uint64_t cs_native4k_digest_wall[2] = {0, 0};
+__attribute__((weak, visibility("hidden"))) uint64_t cs_native4k_digest_cpu[2] = {0, 0};
+__attribute__((weak, visibility("hidden"))) uint64_t cs_native4k_digest_bytes[2] = {0, 0};
+__attribute__((weak, visibility("hidden"))) uint64_t cs_native4k_chunk_ticks = 0;
+__attribute__((weak, visibility("hidden"))) uint64_t cs_native4k_record_ticks = 0;
+}

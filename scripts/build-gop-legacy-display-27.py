@@ -390,6 +390,16 @@ extern "C" volatile uint32_t native_legacy_formats[10]={{}};
 extern "C" void sheng_ethernet_probe(void) {{}}
 extern "C" void sheng_software_aes_probe(void) {{}}
 ''')
+support.write_text(support.read_text() + '''
+// The pinned ArmCpu, ArmDTPlatform and NativeAdreno components do not export the SPI, clock and
+// GPU hooks the newer display probes call. Weak hidden defaults keep the link whole and still
+// yield to a strong definition when the matching component is enabled later.
+extern "C" __attribute__((weak, visibility("hidden"))) int armcpu_spi_share(uint32_t, void (*)(void *), void *) { return kIOReturnUnsupported; }
+extern "C" __attribute__((weak, visibility("hidden"))) int armcpu_spi_mask(uint32_t, bool) { return kIOReturnUnsupported; }
+extern "C" __attribute__((weak, visibility("hidden"))) void armdt_platform_clock_register(int (*)(uint64_t *), void (*)(uint64_t)) {}
+extern "C" __attribute__((weak, visibility("hidden"))) void native_adreno_gpu_interrupt(uint32_t) {}
+extern "C" __attribute__((weak, visibility("hidden"))) IOReturn native_adreno_pool_add(uint64_t, uint64_t) { return kIOReturnUnsupported; }
+''')
 compile_cpp(support, OUT / 'LegacyDisplaySupport27.o')
 # The keystore state service (AppleKeyStoreState) and its probe, unchanged from iPadOS 17.
 keystore_source = ROOT / 'kits/sheng/KeyStoreProbe.cpp'
