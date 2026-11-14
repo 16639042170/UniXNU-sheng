@@ -81,6 +81,19 @@ jobs:
               (destination / name).write_bytes(data)
               print(f"{name}: {actual}")
           PY
+      - name: pin the sheng SoC sources required by Bluetooth
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("device/feeds.toml")
+          text = path.read_text()
+          old = 'commit = "a9f45dc60c035084b95463781538380f4c3606c9"'
+          new = 'commit = "2dc650ca76ae38715cd0712e60a44b14fe251745"'
+          if old in text:
+              path.write_text(text.replace(old, new, 1), newline="\n")
+          elif new not in text:
+              raise SystemExit("unexpected SM8550 source pin")
+          PY
       - name: cache Ath12kWifi sources
         uses: actions/cache@v4
         with:
