@@ -81,6 +81,13 @@ jobs:
               (destination / name).write_bytes(data)
               print(f"{name}: {actual}")
           PY
+      - name: cache Ath12kWifi sources
+        uses: actions/cache@v4
+        with:
+          path: device/drivers/Ath12kWifi/deps
+          key: ath12k-sources-${{ hashFiles('device/drivers/Ath12kWifi/tools/source-lock.json') }}
+      - name: fetch Ath12kWifi sources
+        run: device/drivers/Ath12kWifi/tools/fetch-sources.sh
       - name: repair the pinned Mesa diagnostics patch
         run: |
           python3 - <<'PY'
