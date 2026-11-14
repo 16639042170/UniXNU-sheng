@@ -93,7 +93,7 @@ jobs:
           path = Path("device/drivers/Ath12kWifi/tools/fetch-sources.py")
           text = path.read_text()
           old = 'subprocess.run(["git", "-C", str(directory), "sparse-checkout", "add", *source["paths"]], check=True)'
-          new = 'subprocess.run(["git", "-C", str(directory), "sparse-checkout", "add", *paths], check=True)'
+          new = 'subprocess.run(["git", "-C", str(directory), "sparse-checkout", "add", "--skip-checks", *paths], check=True)'
           if old in text:
               path.write_text(text.replace(old, new, 1), newline="\n")
           elif new not in text:
