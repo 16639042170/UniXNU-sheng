@@ -86,6 +86,19 @@ jobs:
         with:
           path: device/drivers/Ath12kWifi/deps
           key: ath12k-sources-${{ hashFiles('device/drivers/Ath12kWifi/tools/source-lock.json') }}
+      - name: repair Ath12kWifi sparse checkout paths
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("device/drivers/Ath12kWifi/tools/fetch-sources.py")
+          text = path.read_text()
+          old = 'subprocess.run(["git", "-C", str(directory), "sparse-checkout", "add", *source["paths"]], check=True)'
+          new = 'subprocess.run(["git", "-C", str(directory), "sparse-checkout", "add", *paths], check=True)'
+          if old in text:
+              path.write_text(text.replace(old, new, 1), newline="\n")
+          elif new not in text:
+              raise SystemExit("unexpected Ath12kWifi sparse-checkout call")
+          PY
       - name: fetch Ath12kWifi sources
         run: device/drivers/Ath12kWifi/tools/fetch-sources.sh
       - name: repair the pinned Mesa diagnostics patch
