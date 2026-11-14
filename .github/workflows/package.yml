@@ -81,22 +81,32 @@ jobs:
               (destination / name).write_bytes(data)
               print(f"{name}: {actual}")
           PY
-      - name: stage keyboard firmware
+      - name: stage proprietary firmware
         run: |
           python3 - <<'PY'
           import hashlib
           from pathlib import Path
 
-          source = Path("ci-inputs/firmware/nanosic/MCU_Upgrade.bin")
-          destination = Path("device/.cache/firmware/nanosic/MCU_Upgrade.bin")
-          expected = "9eb7213603474d926d3af1124d3c14d63cbfc58ea2f7f7d9fedc088093fd63c5"
-          data = source.read_bytes()
-          actual = hashlib.sha256(data).hexdigest()
-          if actual != expected:
-              raise SystemExit(f"keyboard firmware SHA-256 mismatch: {actual}")
-          destination.parent.mkdir(parents=True, exist_ok=True)
-          destination.write_bytes(data)
-          print(f"MCU_Upgrade.bin: {actual}")
+          inputs = {
+              "firmware/nanosic/MCU_Upgrade.bin":
+                  ("device/.cache/firmware/nanosic/MCU_Upgrade.bin",
+                   "9eb7213603474d926d3af1124d3c14d63cbfc58ea2f7f7d9fedc088093fd63c5"),
+              "firmware/novatek/novatek_nt36532_n81a_fw_csot.bin":
+                  ("device/.cache/firmware/novatek/novatek_nt36532_n81a_fw_csot.bin",
+                   "750508bb4d75472d35ce5852ec8470d66afa6bf4a4274c136b3759034260ef59"),
+              "firmware/qcom/sm8550/sheng/vpu30_4v.mbn":
+                  ("device/.cache/firmware/qcom/sm8550/sheng/vpu30_4v.mbn",
+                   "56c41b7b28694d261af67db40fa64a6f7076709171876fcc3abf0ce411506edb"),
+          }
+          for source_name, (destination_name, expected) in inputs.items():
+              data = (Path("ci-inputs") / source_name).read_bytes()
+              actual = hashlib.sha256(data).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f"firmware SHA-256 mismatch: {source_name}: {actual}")
+              destination = Path(destination_name)
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              destination.write_bytes(data)
+              print(f"{source_name}: {actual}")
           PY
       - name: pin the sheng SoC sources required by Bluetooth
         run: |
