@@ -201,6 +201,21 @@ jobs:
                   text = text.replace(old, new, 1)
               path.write_text(text, newline="\n")
           PY
+      - name: report the prelink layout bounds
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("UniXNU/kits/XnuPrelink/fileset_layout.py")
+          text = path.read_text()
+          old = "            raise ValueError('Native code would collide with collection data')"
+          new = ("            raise ValueError(f'Native code would collide with collection data: "
+                 "code_end={code_end:#x} data={self.roots[\"__DATA\"][\"va\"]:#x} "
+                 "over={code_end - self.roots[\"__DATA\"][\"va\"]:#x}')")
+          if old in text:
+              path.write_text(text.replace(old, new, 1), newline="\n")
+          elif new not in text:
+              raise SystemExit("unexpected XnuPrelink layout collision check")
+          PY
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
