@@ -314,3 +314,21 @@ extern "C" void native_source_storage_start(void)
         thread_deallocate(check);
     ufsBench();
 }
+
+// The pinned RamBlock does not define the Data disk counters BootLog.c reads: the weak-import
+// defaults generator only understands single-line declarations, and these are a multi-line block.
+// Weak hidden zeros keep the kernel link whole; a later strong RamBlock definition still wins.
+extern "C" {
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_reads = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_read_bytes = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_read_ticks = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_writes = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_write_bytes = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_write_ticks = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_gate_ticks = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_io_max_ticks = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_flushes = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_flush_ticks = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_flush_blocks = 0;
+__attribute__((weak, visibility("hidden"))) volatile uint64_t native_data_timer_flushes = 0;
+}
